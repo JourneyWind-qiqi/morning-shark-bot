@@ -4,6 +4,7 @@ import random
 import datetime
 from urllib.parse import quote
 import os
+import pytz  # 新增时区库
 
 # SHARK_BASE_LIST = os.getenv("SHARK_BASE_URLS").split(",")
 # QWEATHER_KEY = os.getenv("WEATHER_KEY")
@@ -299,7 +300,9 @@ def get_weekday_desc():
     return weekday_descs[today_weekday]
 
 def get_time_period():
-    now = datetime.datetime.now()
+    # 强制使用北京时间 UTC+8
+    tz_cn = pytz.timezone("Asia/Shanghai")
+    now = datetime.datetime.now(tz_cn)
     hour = now.hour
 
     if 6 <= hour < 12:
@@ -333,6 +336,10 @@ def get_full_content():
     today = datetime.date.today().strftime('%Y年%m月%d日')
     weekday_desc = get_weekday_desc()
     time_period = get_time_period()
+
+    now = datetime.datetime.now()
+    print(f"\n⏰ 当前时间: {now.strftime('%H:%M:%S')}")
+    print(f"📅 判断时间段: {time_period} ({'早上 6:00-11:59' if time_period == 'morning' else '中午 12:00-17:59' if time_period == 'noon' else '晚上 18:00-次日5:59'})")
 
     if time_period == "morning":
         greet = random.choice(greet_list).rstrip('')
