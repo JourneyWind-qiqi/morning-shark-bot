@@ -1,0 +1,20 @@
+name: 又是美好的一天
+on:
+  schedule:
+    # UTC23:30 = 北京时间早上 07:30自动推送
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  push-task:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - env:
+          SHARK_BASE_URLS: ${{ secrets.SHARK_BASE_URLS }}
+          WEATHER_KEY: ${{ secrets.WEATHER_KEY }}
+        run: python morning_push.py
