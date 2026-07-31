@@ -97,10 +97,6 @@ def get_weather_info():
         data = resp.json()
 
         if resp.status_code == 403:
-            print("❌ API访问被拒绝 - 可能原因：")
-            print("   1. 免费版限制：需在和风天气控制台添加当前IP到白名单")
-            print("   2. 域名限制：检查API Key绑定的域名是否包含localhost")
-            print("   3. 订阅过期：检查和风天气账户是否还有可用额度")
             return None
 
         if data.get("code") == "200":
