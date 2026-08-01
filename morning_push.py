@@ -305,9 +305,9 @@ def get_time_period():
     now = datetime.datetime.now(tz_cn)
     hour = now.hour
 
-    if 6 <= hour < 12:
+    if 5 <= hour < 11:
         return "morning"
-    elif 12 <= hour < 18:
+    elif 11 <= hour < 18:
         return "noon"
     else:
         return "evening"
