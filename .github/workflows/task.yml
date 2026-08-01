@@ -1,12 +1,12 @@
 name: 每日问候推送
 on:
   schedule:
- # UTC 23:00 = 北京时间早上 07:00 早安推送
-    - cron: '0 23 * * *'
-    # UTC 04:30 = 北京时间中午 12:30 午安推送
-    - cron: '30 4 * * *'
-    # UTC 15:00 = 北京时间晚上 23:00 晚安推送
-    - cron: '0 15 * * *'
+    # UTC 22:00 = 北京时间 06:00 早安推送
+    - cron: '3 22 * * *'
+    # UTC 03:00 = 北京时间 11:00 午安推送
+    - cron: '3 3 * * *'
+    # UTC 14:30 = 北京时间 22:30 晚安推送
+    - cron: '39 14 * * *'
   workflow_dispatch:
 jobs:
   push-task:
@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # 安装 requests + 时区库pytz
       - run: pip install requests pytz
       - env:
           SHARK_BASE_URLS: ${{ secrets.SHARK_BASE_URLS }}
