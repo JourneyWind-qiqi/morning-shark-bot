@@ -284,6 +284,10 @@ def get_weather_icon(weather):
     else:
         return "🌤️"
 
+def get_cn_now():
+    tz_cn = pytz.timezone("Asia/Shanghai")
+    return datetime.datetime.now(tz_cn)
+
 def get_weekday_desc():
     weekday_names = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
     weekday_descs = [
@@ -296,21 +300,37 @@ def get_weekday_desc():
         "惬意星期日"
     ]
 
-    today_weekday = datetime.date.today().weekday()
+    today_weekday = get_cn_now().weekday()
     return weekday_descs[today_weekday]
 
-def get_time_period():
-    # 强制使用北京时间 UTC+8
-    tz_cn = pytz.timezone("Asia/Shanghai")
-    now = datetime.datetime.now(tz_cn)
-    hour = now.hour
+SEND_WINDOWS = {
+    "morning": (5, 8.5),
+    "noon":    (11, 12.5),
+    "evening": (20, 23),
+}
 
-    if 5 <= hour < 11:
-        return "morning"
-    elif 11 <= hour < 18:
-        return "noon"
-    else:
-        return "evening"
+def get_current_window():
+    now = get_cn_now()
+    cur_hour = now.hour + now.minute / 60
+    for period, (start, end) in SEND_WINDOWS.items():
+        if start <= cur_hour < end:
+            return period
+    return None
+
+STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "send_state.json")
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_state(state):
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
 
 def get_noon_tip():
     noon_tips = [
@@ -332,14 +352,13 @@ def get_evening_tip():
     ]
     return random.choice(evening_tips)
 
-def get_full_content():
-    today = datetime.date.today().strftime('%Y年%m月%d日')
+def get_full_content(time_period):
+    cn_now = get_cn_now()
+    today = cn_now.strftime('%Y年%m月%d日')
     weekday_desc = get_weekday_desc()
-    time_period = get_time_period()
 
-    now = datetime.datetime.now()
-    print(f"\n⏰ 当前时间: {now.strftime('%H:%M:%S')}")
-    print(f"📅 判断时间段: {time_period} ({'早上 6:00-11:59' if time_period == 'morning' else '中午 12:00-17:59' if time_period == 'noon' else '晚上 18:00-次日5:59'})")
+    print(f"\n⏰ 北京时间: {cn_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"📅 发送时段: {time_period} (早5:00-8:30 / 午11:00-12:30 / 晚19:00-23:00)")
 
     if time_period == "morning":
         greet = random.choice(greet_list).rstrip('')
@@ -421,18 +440,43 @@ def send_shark_inbox(title, sub_title, content):
     print("\n原始内容：", content)
 
 if __name__ == "__main__":
-    time_period = get_time_period()
+    cn_now = get_cn_now()
+    today_str = cn_now.strftime("%Y-%m-%d")
+    print(f"🚀 脚本启动，北京时间: {cn_now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🕒 发送窗口配置: 早5:00-8:30、午11:00-12:30、晚19:00-23:00")
 
-    if time_period == "morning":
+    current_window = get_current_window()
+    if current_window is None:
+        print(f"⏭️  当前不在任何发送窗口内，跳过本次执行")
+        exit(0)
+
+    print(f"📍 当前属于 [{current_window}] 时段窗口")
+
+    state = load_state()
+    print(f"📋 已发送状态: {state}")
+
+    if state.get("date") == today_str and state.get(current_window):
+        print(f"⏭️  今天[{today_str}]的[{current_window}]时段已经发过了，跳过重复发送")
+        exit(0)
+
+    print(f"✅ 未发送过，开始推送[{current_window}]时段消息...")
+
+    if current_window == "morning":
         title = "早安安~又是美好的一天"
         subtitle = random.choice(subtitle_list)
-    elif time_period == "noon":
+    elif current_window == "noon":
         title = "午安安~忙碌了一上午辛苦啦"
         subtitle = "记得好好休息哦"
     else:
         title = "晚安安~今天辛苦了早点休息"
         subtitle = "做个好梦"
 
-    msg_content = get_full_content()
+    msg_content = get_full_content(current_window)
     send_shark_inbox(title, subtitle, msg_content)
+
+    new_state = state if state.get("date") == today_str else {"date": today_str}
+    new_state[current_window] = True
+    new_state["last_send_time"] = cn_now.strftime("%Y-%m-%d %H:%M:%S")
+    save_state(new_state)
+    print(f"💾 状态已保存: {new_state}")
     print("✅推送完成！下拉通知查看完整大窗口")
