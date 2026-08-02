@@ -1,8 +1,8 @@
 name: 每日问候推送
 on:
   schedule:
-    # UTC 3/13/22时03分 → 北京时间11:03、21:03、次日06:03
-    - cron: '3 3,13,22 * * *'
+    # 每30分钟触发一次（UTC），一天48次，代码里判断发送窗口 + 去重，不会重复发
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 jobs:
   push-task:
@@ -17,3 +17,14 @@ jobs:
           SHARK_BASE_URLS: ${{ secrets.SHARK_BASE_URLS }}
           WEATHER_KEY: ${{ secrets.WEATHER_KEY }}
         run: python morning_push.py
+      - name: 保存发送状态到仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add send_state.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 更新发送状态 $(date +%Y-%m-%d)"
+            git push
+          else
+            echo "无状态变更，跳过提交"
+          fi
