@@ -1,7 +1,10 @@
 name: 每日问候推送
+# 【关键！全局开启仓库写入权限】
+permissions:
+  contents: write
 on:
   schedule:
-    # 每30分钟触发一次（UTC），一天48次，代码里判断发送窗口 + 去重，不会重复发
+    # UTC时区，每30分钟执行
     - cron: '*/30 * * * *'
   workflow_dispatch:
 jobs:
@@ -9,22 +12,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install requests pytz
-      - env:
+
+      - name: 安装依赖
+        run: pip install requests pytz
+
+      - name: 执行推送脚本
+        env:
           SHARK_BASE_URLS: ${{ secrets.SHARK_BASE_URLS }}
           WEATHER_KEY: ${{ secrets.WEATHER_KEY }}
         run: python morning_push.py
-      - name: 保存发送状态到仓库
+
+      - name: 提交更新 send_state.json
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add send_state.json || true
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: 更新发送状态 $(date +%Y-%m-%d)"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add send_state.json
+          # 判断是否存在变更，避免空提交
+          if [[ -n $(git status --porcelain send_state.json) ]];then
+            git commit -m "chore: 更新发送状态 $(date '+%Y-%m-%d %H:%M')"
             git push
           else
-            echo "无状态变更，跳过提交"
+            echo "✅ send_state.json 无改动，跳过提交"
           fi
